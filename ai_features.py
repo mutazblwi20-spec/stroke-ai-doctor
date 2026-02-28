@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 # =============================
 # Risk Level Analyzer
@@ -20,21 +20,42 @@ def risk_level(prob):
 
 
 # =============================
-# Smart Medical Advice
+# Smart Medical Advice (Dynamic)
 # =============================
 def smart_advice(prob, bmi, glucose):
 
+    low = [
+        "Maintain regular exercise.",
+        "Keep balanced nutrition.",
+        "Continue healthy lifestyle."
+    ]
+
+    medium = [
+        "Monitor blood pressure weekly.",
+        "Reduce sugar intake.",
+        "Increase physical activity."
+    ]
+
+    high = [
+        "Consult a doctor soon.",
+        "Control stress and cholesterol.",
+        "Monitor glucose daily."
+    ]
+
+    critical = [
+        "Immediate medical consultation required.",
+        "Visit emergency care if symptoms appear.",
+        "High stroke risk — medical supervision needed."
+    ]
+
     if prob < 0.25:
-        return "Maintain healthy lifestyle and regular exercise."
-
+        return random.choice(low)
     elif prob < 0.50:
-        return "Monitor blood pressure and maintain balanced diet."
-
+        return random.choice(medium)
     elif prob < 0.75:
-        return "Medical consultation recommended. Reduce stress and monitor glucose."
-
+        return random.choice(high)
     else:
-        return "Immediate medical consultation required."
+        return random.choice(critical)
 
 
 # =============================
@@ -60,7 +81,7 @@ def health_indicators(age, bmi, glucose):
     if glucose > 140:
         indicators.append(("Glucose", "High"))
 
-    if len(indicators) == 0:
+    if not indicators:
         indicators.append(("Health Status", "Normal"))
 
     return indicators
@@ -87,22 +108,5 @@ def draw_gauge(risk):
         fontsize=22,
         fontweight='bold'
     )
-
-    return fig
-
-
-# =============================
-# Trend Chart
-# =============================
-def trend_chart(history):
-
-    risks = [h["risk"] for h in history]
-
-    fig, ax = plt.subplots()
-
-    ax.plot(risks, marker="o")
-    ax.set_title("Patient Risk Trend")
-    ax.set_ylabel("Risk %")
-    ax.set_xlabel("Visits")
 
     return fig
