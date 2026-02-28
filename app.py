@@ -1,112 +1,123 @@
- import matplotlib.pyplot as plt
-import random
+import streamlit as st
+import pickle
+import numpy as np
+import json
+from datetime import datetime
+
+from ai_features import (
+    risk_level,
+    smart_advice,
+    confidence_score,
+    health_indicators,
+    draw_gauge
+)
 
 # =============================
-# Risk Level Analyzer
+# PAGE CONFIG
 # =============================
-def risk_level(prob):
+st.set_page_config(
+    page_title="AI Stroke Doctor",
+    page_icon="🧠",
+    layout="wide"
+)
 
-    if prob < 0.25:
-        return "🟢 Low Risk", "green"
-
-    elif prob < 0.50:
-        return "🟡 Moderate Risk", "orange"
-
-    elif prob < 0.75:
-        return "🔴 High Risk", "red"
-
-    else:
-        return "🚨 Critical Risk", "darkred"
-
+st.title("🧠 AI Stroke Prediction System")
+st.markdown("### Intelligent Medical Decision Support")
 
 # =============================
-# Smart Medical Advice (Dynamic)
+# LOAD MODEL
 # =============================
-def smart_advice(prob, bmi, glucose):
-
-    low = [
-        "Maintain regular exercise.",
-        "Keep balanced nutrition.",
-        "Continue healthy lifestyle."
-    ]
-
-    medium = [
-        "Monitor blood pressure weekly.",
-        "Reduce sugar intake.",
-        "Increase physical activity."
-    ]
-
-    high = [
-        "Consult a doctor soon.",
-        "Control stress and cholesterol.",
-        "Monitor glucose daily."
-    ]
-
-    critical = [
-        "Immediate medical consultation required.",
-        "Visit emergency care if symptoms appear.",
-        "High stroke risk — medical supervision needed."
-    ]
-
-    if prob < 0.25:
-        return random.choice(low)
-    elif prob < 0.50:
-        return random.choice(medium)
-    elif prob < 0.75:
-        return random.choice(high)
-    else:
-        return random.choice(critical)
-
+model = pickle.load(open("stroke_model.pkl", "rb"))
 
 # =============================
-# AI Confidence Score
+# SIDEBAR INPUTS (>6 inputs)
 # =============================
-def confidence_score(prob):
-    return round(abs(prob - 0.5) * 200, 2)
+st.sidebar.header("Patient Data")
 
-
-# =============================
-# Health Indicators
-# =============================
-def health_indicators(age, bmi, glucose):
-
-    indicators = []
-
-    if age > 60:
-        indicators.append(("Age Risk", "High"))
-
-    if bmi > 30:
-        indicators.append(("BMI", "Obese"))
-
-    if glucose > 140:
-        indicators.append(("Glucose", "High"))
-
-    if not indicators:
-        indicators.append(("Health Status", "Normal"))
-
-    return indicators
-
+age = st.sidebar.slider("Age", 1, 100, 40)
+hypertension = st.sidebar.selectbox("Hypertension", [0,1])
+heart_disease = st.sidebar.selectbox("Heart Disease", [0,1])
+glucose = st.sidebar.slider("Glucose Level", 50.0, 300.0, 100.0)
+bmi = st.sidebar.slider("BMI", 10.0, 50.0, 25.0)
+smoking = st.sidebar.selectbox("Smoking Status", [0,1])
 
 # =============================
-# Gauge Chart
+# PREDICTION BUTTON
 # =============================
-def draw_gauge(risk):
+if st.sidebar.button("🔍 Predict"):
 
-    fig, ax = plt.subplots()
+    data = np.array([[age,
+                      hypertension,
+                      heart_disease,
+                      glucose,
+                      bmi,
+                      smoking]])
 
-    ax.pie(
-        [risk, 100-risk],
-        startangle=90,
-        wedgeprops=dict(width=0.35)
-    )
+    prob = model.predict_proba(data)[0][1]
+    risk_percent = round(prob * 100, 2)
 
-    ax.text(
-        0, 0,
-        f"{risk}%",
-        ha='center',
-        va='center',
-        fontsize=22,
-        fontweight='bold'
-    )
+    level, color = risk_level(prob)
+    advice = smart_advice(prob, bmi, glucose)
+    confidence = confidence_score(prob)
+    indicators = health_indicators(age, bmi, glucose)
 
-    return fig
+    col1, col2 = st.columns(2)
+
+    # RESULT
+    with col1:
+        st.subheader("Prediction Result")
+        st.markdown(f"## {level}")
+        st.metric("Stroke Risk", f"{risk_percent}%")
+        st.metric("AI Confidence", f"{confidence}%")
+
+    # GAUGE
+    with col2:
+        fig = draw_gauge(risk_percent)
+        st.pyplot(fig)
+
+    # HEALTH INDICATORS
+    st.subheader("Health Indicators")
+
+    for name, status in indicators:
+        st.write(f"**{name}:** {status}")
+
+    # ADVICE
+    st.subheader("Medical Advice")
+    st.info(advice)
+
+    # =============================
+    # SAVE PATIENT RECORD
+    # =============================
+    record = {
+        "date": str(datetime.now()),
+        "risk": risk_percent
+    }
+
+    try:
+        with open("patients.json","r") as f:
+            history = json.load(f)
+    except:
+        history = []
+
+    history.append(record)
+
+    with open("patients.json","w") as f:
+        json.dump(history,f,indent=4)
+
+    st.success("Patient saved successfully ✅")
+
+# =============================
+# SHOW HISTORY
+# =============================
+st.divider()
+st.subheader("📋 Patient History")
+
+try:
+    with open("patients.json","r") as f:
+        history = json.load(f)
+
+    for h in reversed(history[-5:]):
+        st.write(f"{h['date']} — Risk: {h['risk']}%")
+
+except:
+    st.write("No history yet.")
