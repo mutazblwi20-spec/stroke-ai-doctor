@@ -1,5 +1,5 @@
 import streamlit as st
-import joblib
+import pickle
 import numpy as np
 import json
 from datetime import datetime
@@ -25,21 +25,25 @@ st.title("🧠 AI Stroke Prediction System")
 st.markdown("### Intelligent Medical Decision Support")
 
 # =============================
-# LOAD MODEL (FIXED)
+# LOAD MODEL (SAFE LOAD)
 # =============================
-@st.cache_resource
-def load_model():
-    return joblib.load("stroke_model.pkl")
-
-model = load_model()
+try:
+    with open("stroke_model.pkl", "rb") as f:
+        model = pickle.load(f)
+except Exception as e:
+    st.error("❌ Model failed to load. Re-upload stroke_model.pkl")
+    st.stop()
 
 # =============================
 # SIDEBAR INPUTS
 # =============================
 st.sidebar.header("Patient Information")
 
+patient_name = st.sidebar.text_input("Patient Name")
+
 gender = st.sidebar.selectbox("Gender", ["Male", "Female"])
 age = st.sidebar.slider("Age", 1, 100, 40)
+
 hypertension = st.sidebar.selectbox("Hypertension", ["No", "Yes"])
 heart_disease = st.sidebar.selectbox("Heart Disease", ["No", "Yes"])
 ever_married = st.sidebar.selectbox("Ever Married", ["No", "Yes"])
@@ -63,7 +67,7 @@ smoking = st.sidebar.selectbox(
 )
 
 # =============================
-# ENCODING
+# ENCODING (MATCH TRAINING)
 # =============================
 gender = 1 if gender == "Male" else 0
 hypertension = 1 if hypertension == "Yes" else 0
@@ -93,80 +97,89 @@ smoking = smoke_map[smoking]
 # =============================
 if st.sidebar.button("🔍 Predict"):
 
-    data = np.array([[
-        gender,
-        age,
-        hypertension,
-        heart_disease,
-        ever_married,
-        work_type,
-        residence,
-        glucose,
-        bmi,
-        smoking
-    ]], dtype=float)   # ⭐ FIX مهم جداً
-
-    prob = model.predict_proba(data)[0][1]
-    risk_percent = round(prob * 100, 2)
-
-    level, color = risk_level(prob)
-    advice = smart_advice(prob, bmi, glucose)
-    confidence = confidence_score(prob)
-    indicators = health_indicators(age, bmi, glucose)
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Prediction Result")
-        st.markdown(f"## {level}")
-        st.metric("Stroke Risk", f"{risk_percent}%")
-        st.metric("AI Confidence", f"{confidence}%")
-
-    with col2:
-        fig = draw_gauge(risk_percent)
-        st.pyplot(fig)
-
-    st.subheader("Health Indicators")
-
-    for name, status in indicators:
-        st.write(f"**{name}:** {status}")
-
-    st.subheader("Medical Advice")
-    st.info(advice)
-
-    # =============================
-    # SAVE HISTORY
-    # =============================
-    record = {
-        "date": str(datetime.now()),
-        "risk": risk_percent
-    }
-
     try:
-        with open("patients.json", "r") as f:
-            history = json.load(f)
-    except:
-        history = []
+        data = np.array([[
+            gender,
+            age,
+            hypertension,
+            heart_disease,
+            ever_married,
+            work_type,
+            residence,
+            glucose,
+            bmi,
+            smoking
+        ]])
 
-    history.append(record)
+        prob = model.predict_proba(data)[0][1]
+        risk_percent = round(prob * 100, 2)
 
-    with open("patients.json", "w") as f:
-        json.dump(history, f, indent=4)
+        # =============================
+        # FINAL DIAGNOSIS
+        # =============================
+        if prob >= 0.5:
+            diagnosis = "⚠️ Stroke Detected (مصاب)"
+            result_color = "red"
+        else:
+            diagnosis = "✅ No Stroke (غير مصاب)"
+            result_color = "green"
 
-    st.success("Patient saved successfully ✅")
+        level, color = risk_level(prob)
+        advice = smart_advice(prob, bmi, glucose)
+        confidence = confidence_score(prob)
+        indicators = health_indicators(age, bmi, glucose)
+
+        col1, col2 = st.columns(2)
+
+        # RESULT PANEL
+        with col1:
+            st.subheader("Prediction Result")
+            st.markdown(f"## :{result_color}[{diagnosis}]")
+            st.metric("Stroke Risk", f"{risk_percent}%")
+            st.metric("AI Confidence", f"{confidence}%")
+
+        # GAUGE
+        with col2:
+            fig = draw_gauge(risk_percent)
+            st.pyplot(fig)
+
+        # HEALTH INDICATORS
+        st.subheader("Health Indicators")
+        for name, status in indicators:
+            st.write(f"**{name}:** {status}")
+
+        # ADVICE
+        st.subheader("Medical Advice")
+        st.info(advice)
+
+        # =============================
+        # SAVE PATIENT HISTORY
+        # =============================
+        record = {
+            "name": patient_name if patient_name else "Unknown",
+            "date": str(datetime.now()),
+            "risk": risk_percent,
+            "diagnosis": diagnosis
+        }
+
+        try:
+            with open("patients.json", "r") as f:
+                history = json.load(f)
+        except:
+            history = []
+
+        history.append(record)
+
+        with open("patients.json", "w") as f:
+            json.dump(history, f, indent=4)
+
+        st.success("Patient saved successfully ✅")
+
+    except Exception as e:
+        st.error("❌ Prediction Error — Check model features match training data.")
 
 # =============================
 # HISTORY
 # =============================
 st.divider()
-st.subheader("📋 Patient History")
-
-try:
-    with open("patients.json", "r") as f:
-        history = json.load(f)
-
-    for h in reversed(history[-5:]):
-        st.write(f"{h['date']} — Risk: {h['risk']}%")
-
-except:
-    st.write("No history yet.")
+st.subheader("📋
