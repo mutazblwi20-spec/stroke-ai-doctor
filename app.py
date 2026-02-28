@@ -1,5 +1,5 @@
 import streamlit as st
-import pickle
+import joblib
 import numpy as np
 import json
 from datetime import datetime
@@ -25,9 +25,13 @@ st.title("🧠 AI Stroke Prediction System")
 st.markdown("### Intelligent Medical Decision Support")
 
 # =============================
-# LOAD MODEL
+# LOAD MODEL (FIXED)
 # =============================
-model = pickle.load(open("stroke_model.pkl", "rb"))
+@st.cache_resource
+def load_model():
+    return joblib.load("stroke_model.pkl")
+
+model = load_model()
 
 # =============================
 # SIDEBAR INPUTS
@@ -59,7 +63,7 @@ smoking = st.sidebar.selectbox(
 )
 
 # =============================
-# ENCODING (IMPORTANT)
+# ENCODING
 # =============================
 gender = 1 if gender == "Male" else 0
 hypertension = 1 if hypertension == "Yes" else 0
@@ -68,17 +72,17 @@ ever_married = 1 if ever_married == "Yes" else 0
 residence = 1 if residence == "Urban" else 0
 
 work_map = {
-    "Private":0,
-    "Self-employed":1,
-    "Govt_job":2,
-    "children":3,
-    "Never_worked":4
+    "Private": 0,
+    "Self-employed": 1,
+    "Govt_job": 2,
+    "children": 3,
+    "Never_worked": 4
 }
 
 smoke_map = {
-    "never smoked":0,
-    "formerly smoked":1,
-    "smokes":2
+    "never smoked": 0,
+    "formerly smoked": 1,
+    "smokes": 2
 }
 
 work_type = work_map[work_type]
@@ -100,7 +104,7 @@ if st.sidebar.button("🔍 Predict"):
         glucose,
         bmi,
         smoking
-    ]])
+    ]], dtype=float)   # ⭐ FIX مهم جداً
 
     prob = model.predict_proba(data)[0][1]
     risk_percent = round(prob * 100, 2)
@@ -130,22 +134,24 @@ if st.sidebar.button("🔍 Predict"):
     st.subheader("Medical Advice")
     st.info(advice)
 
+    # =============================
     # SAVE HISTORY
+    # =============================
     record = {
         "date": str(datetime.now()),
         "risk": risk_percent
     }
 
     try:
-        with open("patients.json","r") as f:
+        with open("patients.json", "r") as f:
             history = json.load(f)
     except:
         history = []
 
     history.append(record)
 
-    with open("patients.json","w") as f:
-        json.dump(history,f,indent=4)
+    with open("patients.json", "w") as f:
+        json.dump(history, f, indent=4)
 
     st.success("Patient saved successfully ✅")
 
@@ -156,7 +162,7 @@ st.divider()
 st.subheader("📋 Patient History")
 
 try:
-    with open("patients.json","r") as f:
+    with open("patients.json", "r") as f:
         history = json.load(f)
 
     for h in reversed(history[-5:]):
