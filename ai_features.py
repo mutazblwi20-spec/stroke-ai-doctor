@@ -3,105 +3,99 @@
 import matplotlib.pyplot as plt
 
 # =====================================
-# 🌐 TRANSLATIONS (AI TEXTS)
-# =====================================
-
-AI_TEXT = {
-
-    "English": {
-        "age_low": "Age Risk: Low",
-        "age_high": "Age Risk: High",
-
-        "bmi_normal": "BMI: Normal",
-        "bmi_over": "BMI: Overweight",
-        "bmi_obese": "BMI: Obese",
-
-        "glucose_normal": "Glucose: Normal",
-        "glucose_high": "Glucose: High",
-
-        "advice_low": "Maintain a healthy lifestyle.",
-        "advice_mid": "Improve diet and increase physical activity.",
-        "advice_high": "Consult a doctor immediately and monitor health."
-    },
-
-    "العربية": {
-        "age_low": "خطر العمر: منخفض",
-        "age_high": "خطر العمر: مرتفع",
-
-        "bmi_normal": "مؤشر الكتلة: طبيعي",
-        "bmi_over": "مؤشر الكتلة: زيادة وزن",
-        "bmi_obese": "مؤشر الكتلة: سمنة",
-
-        "glucose_normal": "السكر: طبيعي",
-        "glucose_high": "السكر: مرتفع",
-
-        "advice_low": "حافظ على نمط حياة صحي.",
-        "advice_mid": "حسّن نظامك الغذائي وزد النشاط البدني.",
-        "advice_high": "راجع الطبيب فوراً وراقب حالتك الصحية."
-    }
-}
-
-
-def T(lang, key):
-    return AI_TEXT[lang][key]
-
-# =====================================
-# RISK LEVEL
+# RISK LEVEL CLASSIFICATION
 # =====================================
 def risk_level(prob):
-    if prob < 0.3:
-        return "Low Risk", "green"
-    elif prob < 0.6:
-        return "Medium Risk", "orange"
+
+    if prob < 0.25:
+        return "🟢 Low Risk"
+
+    elif prob < 0.50:
+        return "🟡 Moderate Risk"
+
+    elif prob < 0.75:
+        return "🔴 High Risk"
+
     else:
-        return "High Risk", "red"
+        return "🚨 Critical Risk"
+
 
 # =====================================
-# HEALTH INDICATORS
+# SMART MEDICAL ADVICE
 # =====================================
-def health_indicators(age, bmi, glucose, language):
+def smart_advice(prob, bmi, glucose):
 
-    indicators = []
+    if prob < 0.30:
+        return "Maintain a healthy lifestyle and exercise regularly."
 
-    # AGE
-    if age > 60:
-        indicators.append(("Age", T(language, "age_high")))
+    elif prob < 0.60:
+        return "Improve diet, monitor blood pressure, and increase activity."
+
     else:
-        indicators.append(("Age", T(language, "age_low")))
+        return "High stroke risk detected. Medical consultation is strongly recommended."
 
-    # BMI
-    if bmi < 25:
-        indicators.append(("BMI", T(language, "bmi_normal")))
-    elif bmi < 30:
-        indicators.append(("BMI", T(language, "bmi_over")))
-    else:
-        indicators.append(("BMI", T(language, "bmi_obese")))
-
-    # GLUCOSE
-    if glucose > 140:
-        indicators.append(("Glucose", T(language, "glucose_high")))
-    else:
-        indicators.append(("Glucose", T(language, "glucose_normal")))
-
-    return indicators
 
 # =====================================
-# SMART ADVICE
-# =====================================
-def smart_advice(prob, bmi, glucose, language):
-
-    if prob < 0.3:
-        return T(language, "advice_low")
-    elif prob < 0.6:
-        return T(language, "advice_mid")
-    else:
-        return T(language, "advice_high")
-
-# =====================================
-# CONFIDENCE
+# AI CONFIDENCE SCORE
 # =====================================
 def confidence_score(prob):
-    return round(70 + prob * 30, 2)
+    return round(abs(prob - 0.5) * 200, 2)
+
+
+# =====================================
+# RISK FACTOR ANALYSIS ⭐
+# =====================================
+def risk_factor_analysis(age, glucose, bmi,
+                         hypertension, heart_disease, smoking):
+
+    factors = []
+
+    # AGE
+    if age >= 65:
+        factors.append(("Age", "🔴 Very High Risk"))
+    elif age >= 50:
+        factors.append(("Age", "🟠 Moderate Risk"))
+    else:
+        factors.append(("Age", "🟢 Low Risk"))
+
+    # GLUCOSE
+    if glucose >= 200:
+        factors.append(("Glucose", "🚨 Critical"))
+    elif glucose >= 140:
+        factors.append(("Glucose", "🟠 High"))
+    else:
+        factors.append(("Glucose", "🟢 Normal"))
+
+    # BMI
+    if bmi >= 30:
+        factors.append(("BMI", "🟠 Obese"))
+    elif bmi >= 25:
+        factors.append(("BMI", "🟡 Overweight"))
+    else:
+        factors.append(("BMI", "🟢 Normal"))
+
+    # HYPERTENSION
+    factors.append((
+        "Hypertension",
+        "🔴 Present" if hypertension else "🟢 Normal"
+    ))
+
+    # HEART DISEASE
+    factors.append((
+        "Heart Disease",
+        "🔴 High Impact" if heart_disease else "🟢 None"
+    ))
+
+    # SMOKING
+    if smoking == 2:
+        factors.append(("Smoking", "🟠 Active Smoker"))
+    elif smoking == 1:
+        factors.append(("Smoking", "🟡 Former Smoker"))
+    else:
+        factors.append(("Smoking", "🟢 Non Smoker"))
+
+    return factors
+
 
 # =====================================
 # GAUGE CHART
@@ -114,10 +108,18 @@ def draw_gauge(percent):
         [percent, 100 - percent],
         startangle=90,
         counterclock=False,
-        wedgeprops={"width": 0.3}
+        wedgeprops={"width": 0.35}
     )
 
-    ax.text(0, 0, f"{percent}%", ha="center", va="center", fontsize=20)
+    ax.text(
+        0, 0,
+        f"{percent}%",
+        ha="center",
+        va="center",
+        fontsize=22,
+        fontweight="bold"
+    )
+
     ax.axis("equal")
 
     return fig
