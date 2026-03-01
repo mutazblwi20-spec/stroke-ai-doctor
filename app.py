@@ -1,5 +1,5 @@
 # =====================================================
-# 🧠 AI STROKE DOCTOR - FINAL VERSION
+# 🧠 AI STROKE DOCTOR — FINAL MEDICAL VERSION
 # =====================================================
 
 import streamlit as st
@@ -34,10 +34,7 @@ st.markdown("""
 <style>
 .stApp {background:#f4f8fb;}
 
-h1 {
-    text-align:center;
-    color:#0b5394;
-}
+h1 {text-align:center;color:#0b5394;}
 
 section[data-testid="stSidebar"] {
     background:#eaf3fb;
@@ -46,10 +43,17 @@ section[data-testid="stSidebar"] {
 .stButton>button {
     background:#0b5394;
     color:white;
-    border-radius:10px;
+    border-radius:12px;
     height:3em;
     width:100%;
     font-size:16px;
+}
+
+.metric-card {
+    padding:15px;
+    border-radius:12px;
+    background:white;
+    box-shadow:0 4px 15px rgba(0,0,0,0.1);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -62,7 +66,7 @@ st.title("🧠 AI Stroke Prediction System")
 st.markdown("### Intelligent Medical Decision Support")
 
 # =====================================================
-# LOAD MODEL (CACHED)
+# LOAD MODEL
 # =====================================================
 
 @st.cache_resource
@@ -73,10 +77,7 @@ def load_model():
         st.stop()
 
     with open("stroke_model.pkl", "rb") as f:
-        model = pickle.load(f)
-
-    return model
-
+        return pickle.load(f)
 
 model = load_model()
 
@@ -100,10 +101,7 @@ work_type = st.sidebar.selectbox(
     ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
 )
 
-residence = st.sidebar.selectbox(
-    "Residence Type",
-    ["Urban", "Rural"]
-)
+residence = st.sidebar.selectbox("Residence Type", ["Urban", "Rural"])
 
 glucose = st.sidebar.slider("Average Glucose Level", 50.0, 300.0, 100.0)
 bmi = st.sidebar.slider("BMI", 10.0, 50.0, 25.0)
@@ -114,7 +112,7 @@ smoking = st.sidebar.selectbox(
 )
 
 # =====================================================
-# ENCODING (MATCH TRAINING)
+# ENCODING
 # =====================================================
 
 gender = 1 if gender == "Male" else 0
@@ -141,10 +139,10 @@ work_type = work_map[work_type]
 smoking = smoke_map[smoking]
 
 # =====================================================
-# MEDICAL DECISION THRESHOLD (🔥 IMPORTANT FIX)
+# MEDICAL THRESHOLD
 # =====================================================
 
-THRESHOLD = 0.25   # Medical AI threshold
+THRESHOLD = 0.25
 
 # =====================================================
 # PREDICTION
@@ -157,6 +155,7 @@ if st.sidebar.button("🔍 Predict"):
         st.stop()
 
     data = np.array([[
+
         gender,
         age,
         hypertension,
@@ -167,22 +166,20 @@ if st.sidebar.button("🔍 Predict"):
         glucose,
         bmi,
         smoking
+
     ]])
 
-    # Prevent feature mismatch crash
+    # feature safety check
     if hasattr(model, "n_features_in_"):
         if data.shape[1] != model.n_features_in_:
-            st.error(
-                f"Model expects {model.n_features_in_} features "
-                f"but received {data.shape[1]}"
-            )
+            st.error("Model feature mismatch.")
             st.stop()
 
     prob = model.predict_proba(data)[0][1]
     risk_percent = round(prob * 100, 2)
 
     # =================================================
-    # FINAL DIAGNOSIS (FIXED)
+    # DIAGNOSIS
     # =================================================
 
     if prob >= THRESHOLD:
@@ -196,26 +193,63 @@ if st.sidebar.button("🔍 Predict"):
     indicators = health_indicators(age, bmi, glucose)
     advice = smart_advice(prob, bmi, glucose)
 
+    # =================================================
+    # RISK FACTOR ANALYSIS (🔥 NEW)
+    # =================================================
+
+    risk_factors = []
+
+    if age > 60:
+        risk_factors.append("Advanced Age")
+
+    if hypertension == 1:
+        risk_factors.append("Hypertension")
+
+    if heart_disease == 1:
+        risk_factors.append("Heart Disease")
+
+    if glucose > 140:
+        risk_factors.append("High Glucose")
+
+    if bmi > 30:
+        risk_factors.append("Obesity")
+
+    if smoking == 2:
+        risk_factors.append("Smoking")
+
+    # =================================================
+    # RESULT UI
+    # =================================================
+
     col1, col2 = st.columns(2)
 
-    # RESULT PANEL
     with col1:
         st.subheader("Prediction Result")
         st.markdown(f"## :{color}[{diagnosis}]")
         st.metric("Stroke Risk", f"{risk_percent}%")
         st.metric("AI Confidence", f"{confidence}%")
 
-    # GAUGE
     with col2:
-        fig = draw_gauge(risk_percent)
-        st.pyplot(fig)
+        st.pyplot(draw_gauge(risk_percent))
 
-    # HEALTH INDICATORS
+    # -------------------------------------------------
+
+    st.subheader("🧬 Risk Factor Analysis")
+
+    if risk_factors:
+        for rf in risk_factors:
+            st.write("⚠️", rf)
+    else:
+        st.success("No major risk factors detected")
+
+    # -------------------------------------------------
+
     st.subheader("🩺 Health Indicators")
     for name, status in indicators:
         st.write(f"**{name}:** {status}")
 
-    # ADVICE
+    # -------------------------------------------------
+
     st.subheader("💡 Medical Advice")
     st.info(advice)
 
