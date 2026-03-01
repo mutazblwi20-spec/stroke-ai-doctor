@@ -182,4 +182,4 @@ if st.sidebar.button("🔍 Predict"):
 # HISTORY
 # =============================
 st.divider()
-st.subheader("📋
+st.subheader("📋 Patient History")
