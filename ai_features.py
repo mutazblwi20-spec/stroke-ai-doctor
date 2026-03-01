@@ -1,30 +1,19 @@
-# ai_features.py
+# =====================================================
+# 🧠 AI MEDICAL FEATURES
+# =====================================================
 
 import matplotlib.pyplot as plt
 
-# =====================================
-# RISK LEVEL
-# =====================================
-
-def risk_level(prob):
-    if prob < 0.3:
-        return "Low Risk", "green"
-    elif prob < 0.6:
-        return "Medium Risk", "orange"
-    else:
-        return "High Risk", "red"
-
-
-# =====================================
+# =====================================================
 # HEALTH INDICATORS
-# =====================================
+# =====================================================
 
 def health_indicators(age, bmi, glucose):
 
     indicators = []
 
     # AGE
-    if age > 60:
+    if age >= 60:
         indicators.append(("Age", "High Risk"))
     else:
         indicators.append(("Age", "Normal"))
@@ -46,31 +35,55 @@ def health_indicators(age, bmi, glucose):
     return indicators
 
 
-# =====================================
-# SMART ADVICE
-# =====================================
+# =====================================================
+# SMART MEDICAL ADVICE (🔥 NEW LOGIC)
+# =====================================================
 
 def smart_advice(prob, bmi, glucose):
 
-    if prob < 0.3:
-        return "Maintain a healthy lifestyle."
-    elif prob < 0.6:
-        return "Improve diet and increase physical activity."
+    # HIGH RISK
+    if prob >= 0.6:
+        return (
+            "⚠️ High stroke risk detected.\n\n"
+            "• Consult a doctor immediately.\n"
+            "• Monitor blood pressure daily.\n"
+            "• Reduce salt and sugar intake.\n"
+            "• Stop smoking immediately.\n"
+            "• Perform medical tests as soon as possible."
+        )
+
+    # MEDIUM RISK
+    elif prob >= 0.25:
+        return (
+            "🟠 Moderate stroke risk.\n\n"
+            "• Increase physical activity (30 min daily).\n"
+            "• Improve diet and reduce processed food.\n"
+            "• Control weight and blood sugar.\n"
+            "• Regular medical checkups recommended."
+        )
+
+    # LOW RISK
     else:
-        return "Consult a doctor immediately and monitor health."
+        return (
+            "✅ Low stroke risk.\n\n"
+            "• Maintain a healthy lifestyle.\n"
+            "• Exercise regularly.\n"
+            "• Keep balanced nutrition.\n"
+            "• Continue periodic health monitoring."
+        )
 
 
-# =====================================
+# =====================================================
 # CONFIDENCE SCORE
-# =====================================
+# =====================================================
 
 def confidence_score(prob):
     return round(70 + prob * 30, 2)
 
 
-# =====================================
+# =====================================================
 # GAUGE CHART
-# =====================================
+# =====================================================
 
 def draw_gauge(percent):
 
