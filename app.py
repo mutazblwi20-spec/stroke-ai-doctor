@@ -9,7 +9,8 @@ from ai_features import (
     smart_advice,
     confidence_score,
     health_indicators,
-    draw_gauge
+    draw_gauge,
+    risk_level
 )
 
 # =====================================================
@@ -28,18 +29,36 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-.stApp {background:#f4f8fb;}
-h1 {text-align:center;color:#0b5394;}
-section[data-testid="stSidebar"] {background:#eaf3fb;}
+
+.stApp {
+    background: linear-gradient(120deg,#f4f8fb,#ffffff);
+}
+
+h1 {
+    text-align:center;
+    color:#0b5394;
+}
+
+section[data-testid="stSidebar"] {
+    background:#eaf3fb;
+}
 
 .stButton>button {
     background:#0b5394;
     color:white;
-    border-radius:10px;
+    border-radius:12px;
     height:3em;
     width:100%;
     font-size:16px;
 }
+
+.metric-card{
+    padding:15px;
+    border-radius:12px;
+    background:white;
+    box-shadow:0px 4px 15px rgba(0,0,0,0.1);
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,19 +70,24 @@ st.title("🧠 AI Stroke Prediction System")
 st.markdown("### Intelligent Medical Decision Support")
 
 # =====================================================
-# LOAD MODEL
+# LOAD MODEL (SAFE + CACHED)
 # =====================================================
 
 @st.cache_resource
 def load_model():
+
     if not os.path.exists("stroke_model.pkl"):
-        st.error("❌ stroke_model.pkl not found")
+        st.error("❌ stroke_model.pkl not found in repository")
         st.stop()
 
-    with open("stroke_model.pkl", "rb") as f:
-        model = pickle.load(f)
-
-    return model
+    try:
+        with open("stroke_model.pkl", "rb") as f:
+            model = pickle.load(f)
+        return model
+    except Exception as e:
+        st.error("❌ Model loading failed")
+        st.code(str(e))
+        st.stop()
 
 model = load_model()
 
@@ -87,10 +111,7 @@ work_type = st.sidebar.selectbox(
     ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
 )
 
-residence = st.sidebar.selectbox(
-    "Residence Type",
-    ["Urban", "Rural"]
-)
+residence = st.sidebar.selectbox("Residence Type", ["Urban", "Rural"])
 
 glucose = st.sidebar.slider("Average Glucose Level", 50.0, 300.0, 100.0)
 bmi = st.sidebar.slider("BMI", 10.0, 50.0, 25.0)
@@ -101,7 +122,7 @@ smoking = st.sidebar.selectbox(
 )
 
 # =====================================================
-# ENCODING (MODEL FORMAT)
+# ENCODING (MATCH TRAINING DATA)
 # =====================================================
 
 gender = 1 if gender == "Male" else 0
@@ -150,24 +171,35 @@ if st.sidebar.button("🔍 Predict"):
         smoking
     ]])
 
+    # Prevent feature mismatch crash
+    if hasattr(model, "n_features_in_"):
+        if data.shape[1] != model.n_features_in_:
+            st.error(
+                f"Model expects {model.n_features_in_} features "
+                f"but received {data.shape[1]}"
+            )
+            st.stop()
+
     prob = model.predict_proba(data)[0][1]
     risk_percent = round(prob * 100, 2)
 
-    # Diagnosis
-    if prob >= 0.5:
-        diagnosis = "⚠️ Stroke Detected"
+    # ================= Diagnosis =================
+
+    if prob >= 0.35:   # 👈 improved threshold
+        diagnosis = "⚠️ Stroke Risk Detected"
         color = "red"
     else:
-        diagnosis = "✅ No Stroke"
+        diagnosis = "✅ No Stroke Detected"
         color = "green"
 
+    level, _ = risk_level(prob)
     confidence = confidence_score(prob)
     indicators = health_indicators(age, bmi, glucose)
     advice = smart_advice(prob, bmi, glucose)
 
     col1, col2 = st.columns(2)
 
-    # RESULT PANEL
+    # RESULT
     with col1:
         st.subheader("Prediction Result")
         st.markdown(f"## :{color}[{diagnosis}]")
@@ -176,11 +208,11 @@ if st.sidebar.button("🔍 Predict"):
 
     # GAUGE
     with col2:
-        fig = draw_gauge(risk_percent)
-        st.pyplot(fig)
+        st.pyplot(draw_gauge(risk_percent))
 
-    # HEALTH
+    # HEALTH INDICATORS
     st.subheader("🩺 Health Indicators")
+
     for name, status in indicators:
         st.write(f"**{name}:** {status}")
 
@@ -188,7 +220,8 @@ if st.sidebar.button("🔍 Predict"):
     st.subheader("💡 Medical Advice")
     st.info(advice)
 
-    # SAVE HISTORY
+    # ================= SAVE HISTORY =================
+
     record = {
         "name": patient_name,
         "date": str(datetime.now()),
