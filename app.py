@@ -1,3 +1,7 @@
+# =====================================================
+# 🧠 AI STROKE DOCTOR - FINAL VERSION
+# =====================================================
+
 import streamlit as st
 import pickle
 import numpy as np
@@ -9,8 +13,7 @@ from ai_features import (
     smart_advice,
     confidence_score,
     health_indicators,
-    draw_gauge,
-    risk_level
+    draw_gauge
 )
 
 # =====================================================
@@ -29,10 +32,7 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-
-.stApp {
-    background: linear-gradient(120deg,#f4f8fb,#ffffff);
-}
+.stApp {background:#f4f8fb;}
 
 h1 {
     text-align:center;
@@ -46,19 +46,11 @@ section[data-testid="stSidebar"] {
 .stButton>button {
     background:#0b5394;
     color:white;
-    border-radius:12px;
+    border-radius:10px;
     height:3em;
     width:100%;
     font-size:16px;
 }
-
-.metric-card{
-    padding:15px;
-    border-radius:12px;
-    background:white;
-    box-shadow:0px 4px 15px rgba(0,0,0,0.1);
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -70,24 +62,21 @@ st.title("🧠 AI Stroke Prediction System")
 st.markdown("### Intelligent Medical Decision Support")
 
 # =====================================================
-# LOAD MODEL (SAFE + CACHED)
+# LOAD MODEL (CACHED)
 # =====================================================
 
 @st.cache_resource
 def load_model():
 
     if not os.path.exists("stroke_model.pkl"):
-        st.error("❌ stroke_model.pkl not found in repository")
+        st.error("❌ stroke_model.pkl not found")
         st.stop()
 
-    try:
-        with open("stroke_model.pkl", "rb") as f:
-            model = pickle.load(f)
-        return model
-    except Exception as e:
-        st.error("❌ Model loading failed")
-        st.code(str(e))
-        st.stop()
+    with open("stroke_model.pkl", "rb") as f:
+        model = pickle.load(f)
+
+    return model
+
 
 model = load_model()
 
@@ -111,7 +100,10 @@ work_type = st.sidebar.selectbox(
     ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
 )
 
-residence = st.sidebar.selectbox("Residence Type", ["Urban", "Rural"])
+residence = st.sidebar.selectbox(
+    "Residence Type",
+    ["Urban", "Rural"]
+)
 
 glucose = st.sidebar.slider("Average Glucose Level", 50.0, 300.0, 100.0)
 bmi = st.sidebar.slider("BMI", 10.0, 50.0, 25.0)
@@ -122,7 +114,7 @@ smoking = st.sidebar.selectbox(
 )
 
 # =====================================================
-# ENCODING (MATCH TRAINING DATA)
+# ENCODING (MATCH TRAINING)
 # =====================================================
 
 gender = 1 if gender == "Male" else 0
@@ -147,6 +139,12 @@ smoke_map = {
 
 work_type = work_map[work_type]
 smoking = smoke_map[smoking]
+
+# =====================================================
+# MEDICAL DECISION THRESHOLD (🔥 IMPORTANT FIX)
+# =====================================================
+
+THRESHOLD = 0.25   # Medical AI threshold
 
 # =====================================================
 # PREDICTION
@@ -183,23 +181,24 @@ if st.sidebar.button("🔍 Predict"):
     prob = model.predict_proba(data)[0][1]
     risk_percent = round(prob * 100, 2)
 
-    # ================= Diagnosis =================
+    # =================================================
+    # FINAL DIAGNOSIS (FIXED)
+    # =================================================
 
-    if prob >= 0.35:   # 👈 improved threshold
-        diagnosis = "⚠️ Stroke Risk Detected"
+    if prob >= THRESHOLD:
+        diagnosis = "⚠️ Stroke Detected"
         color = "red"
     else:
-        diagnosis = "✅ No Stroke Detected"
+        diagnosis = "✅ No Stroke"
         color = "green"
 
-    level, _ = risk_level(prob)
     confidence = confidence_score(prob)
     indicators = health_indicators(age, bmi, glucose)
     advice = smart_advice(prob, bmi, glucose)
 
     col1, col2 = st.columns(2)
 
-    # RESULT
+    # RESULT PANEL
     with col1:
         st.subheader("Prediction Result")
         st.markdown(f"## :{color}[{diagnosis}]")
@@ -208,11 +207,11 @@ if st.sidebar.button("🔍 Predict"):
 
     # GAUGE
     with col2:
-        st.pyplot(draw_gauge(risk_percent))
+        fig = draw_gauge(risk_percent)
+        st.pyplot(fig)
 
     # HEALTH INDICATORS
     st.subheader("🩺 Health Indicators")
-
     for name, status in indicators:
         st.write(f"**{name}:** {status}")
 
@@ -220,7 +219,9 @@ if st.sidebar.button("🔍 Predict"):
     st.subheader("💡 Medical Advice")
     st.info(advice)
 
-    # ================= SAVE HISTORY =================
+    # =================================================
+    # SAVE HISTORY
+    # =================================================
 
     record = {
         "name": patient_name,
@@ -258,5 +259,6 @@ try:
             f"👤 {h['name']} | {h['date']} | "
             f"Risk: {h['risk']}% | {h['diagnosis']}"
         )
+
 except:
     st.write("No history yet.")
