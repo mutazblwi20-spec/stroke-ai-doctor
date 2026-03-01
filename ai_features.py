@@ -1,112 +1,123 @@
+# ai_features.py
+
 import matplotlib.pyplot as plt
-import random
 
-# =============================
-# Risk Level Analyzer
-# =============================
+# =====================================
+# 🌐 TRANSLATIONS (AI TEXTS)
+# =====================================
+
+AI_TEXT = {
+
+    "English": {
+        "age_low": "Age Risk: Low",
+        "age_high": "Age Risk: High",
+
+        "bmi_normal": "BMI: Normal",
+        "bmi_over": "BMI: Overweight",
+        "bmi_obese": "BMI: Obese",
+
+        "glucose_normal": "Glucose: Normal",
+        "glucose_high": "Glucose: High",
+
+        "advice_low": "Maintain a healthy lifestyle.",
+        "advice_mid": "Improve diet and increase physical activity.",
+        "advice_high": "Consult a doctor immediately and monitor health."
+    },
+
+    "العربية": {
+        "age_low": "خطر العمر: منخفض",
+        "age_high": "خطر العمر: مرتفع",
+
+        "bmi_normal": "مؤشر الكتلة: طبيعي",
+        "bmi_over": "مؤشر الكتلة: زيادة وزن",
+        "bmi_obese": "مؤشر الكتلة: سمنة",
+
+        "glucose_normal": "السكر: طبيعي",
+        "glucose_high": "السكر: مرتفع",
+
+        "advice_low": "حافظ على نمط حياة صحي.",
+        "advice_mid": "حسّن نظامك الغذائي وزد النشاط البدني.",
+        "advice_high": "راجع الطبيب فوراً وراقب حالتك الصحية."
+    }
+}
+
+
+def T(lang, key):
+    return AI_TEXT[lang][key]
+
+# =====================================
+# RISK LEVEL
+# =====================================
 def risk_level(prob):
-
-    if prob < 0.25:
-        return "🟢 Low Risk", "green"
-
-    elif prob < 0.50:
-        return "🟡 Moderate Risk", "orange"
-
-    elif prob < 0.75:
-        return "🔴 High Risk", "red"
-
+    if prob < 0.3:
+        return "Low Risk", "green"
+    elif prob < 0.6:
+        return "Medium Risk", "orange"
     else:
-        return "🚨 Critical Risk", "darkred"
+        return "High Risk", "red"
 
-
-# =============================
-# Smart Medical Advice (Dynamic)
-# =============================
-def smart_advice(prob, bmi, glucose):
-
-    low = [
-        "Maintain regular exercise.",
-        "Keep balanced nutrition.",
-        "Continue healthy lifestyle."
-    ]
-
-    medium = [
-        "Monitor blood pressure weekly.",
-        "Reduce sugar intake.",
-        "Increase physical activity."
-    ]
-
-    high = [
-        "Consult a doctor soon.",
-        "Control stress and cholesterol.",
-        "Monitor glucose daily."
-    ]
-
-    critical = [
-        "Immediate medical consultation required.",
-        "Visit emergency care if symptoms appear.",
-        "High stroke risk — medical supervision needed."
-    ]
-
-    if prob < 0.25:
-        return random.choice(low)
-    elif prob < 0.50:
-        return random.choice(medium)
-    elif prob < 0.75:
-        return random.choice(high)
-    else:
-        return random.choice(critical)
-
-
-# =============================
-# AI Confidence Score
-# =============================
-def confidence_score(prob):
-    return round(abs(prob - 0.5) * 200, 2)
-
-
-# =============================
-# Health Indicators
-# =============================
-def health_indicators(age, bmi, glucose):
+# =====================================
+# HEALTH INDICATORS
+# =====================================
+def health_indicators(age, bmi, glucose, language):
 
     indicators = []
 
+    # AGE
     if age > 60:
-        indicators.append(("Age Risk", "High"))
+        indicators.append(("Age", T(language, "age_high")))
+    else:
+        indicators.append(("Age", T(language, "age_low")))
 
-    if bmi > 30:
-        indicators.append(("BMI", "Obese"))
+    # BMI
+    if bmi < 25:
+        indicators.append(("BMI", T(language, "bmi_normal")))
+    elif bmi < 30:
+        indicators.append(("BMI", T(language, "bmi_over")))
+    else:
+        indicators.append(("BMI", T(language, "bmi_obese")))
 
+    # GLUCOSE
     if glucose > 140:
-        indicators.append(("Glucose", "High"))
-
-    if not indicators:
-        indicators.append(("Health Status", "Normal"))
+        indicators.append(("Glucose", T(language, "glucose_high")))
+    else:
+        indicators.append(("Glucose", T(language, "glucose_normal")))
 
     return indicators
 
+# =====================================
+# SMART ADVICE
+# =====================================
+def smart_advice(prob, bmi, glucose, language):
 
-# =============================
-# Gauge Chart
-# =============================
-def draw_gauge(risk):
+    if prob < 0.3:
+        return T(language, "advice_low")
+    elif prob < 0.6:
+        return T(language, "advice_mid")
+    else:
+        return T(language, "advice_high")
+
+# =====================================
+# CONFIDENCE
+# =====================================
+def confidence_score(prob):
+    return round(70 + prob * 30, 2)
+
+# =====================================
+# GAUGE CHART
+# =====================================
+def draw_gauge(percent):
 
     fig, ax = plt.subplots()
 
     ax.pie(
-        [risk, 100-risk],
+        [percent, 100 - percent],
         startangle=90,
-        wedgeprops=dict(width=0.35)
+        counterclock=False,
+        wedgeprops={"width": 0.3}
     )
 
-    ax.text(
-        0, 0,
-        f"{risk}%",
-        ha='center',
-        va='center',
-        fontsize=22,
-        fontweight='bold'
-    )
+    ax.text(0, 0, f"{percent}%", ha="center", va="center", fontsize=20)
+    ax.axis("equal")
 
     return fig
