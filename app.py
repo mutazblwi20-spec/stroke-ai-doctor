@@ -14,7 +14,7 @@ from ai_features import (
 )
 
 # =====================================================
-# 🌐 GLOBAL LANGUAGE SYSTEM (FULL PROJECT TRANSLATION)
+# 🌐 GLOBAL TRANSLATION SYSTEM
 # =====================================================
 
 translations = {
@@ -90,7 +90,7 @@ translations = {
     }
 }
 
-# language selector
+# Language selector
 language = st.sidebar.selectbox(
     "🌐 Language / اللغة",
     ["English", "العربية"]
@@ -109,7 +109,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# 🎨 MEDICAL UI DESIGN
+# 🎨 MEDICAL UI STYLE
 # =====================================================
 st.markdown("""
 <style>
@@ -119,12 +119,21 @@ section[data-testid="stSidebar"] {background:#eaf3fb;}
 .stButton>button {
     background:#0b5394;
     color:white;
-    border-radius:10px;
+    border-radius:12px;
     height:3em;
     width:100%;
 }
 </style>
 """, unsafe_allow_html=True)
+
+# RTL Arabic layout
+if language == "العربية":
+    st.markdown("""
+    <style>
+    body {direction: rtl;}
+    .stMarkdown, label {text-align:right;}
+    </style>
+    """, unsafe_allow_html=True)
 
 # =====================================================
 # TITLE
@@ -138,9 +147,11 @@ st.markdown(f"### {T('subtitle')}")
 @st.cache_resource
 def load_model():
     if not os.path.exists("stroke_model.pkl"):
-        st.error("Model missing")
+        st.error("❌ stroke_model.pkl not found")
         st.stop()
-    return pickle.load(open("stroke_model.pkl","rb"))
+
+    with open("stroke_model.pkl", "rb") as f:
+        return pickle.load(f)
 
 model = load_model()
 
@@ -150,7 +161,6 @@ model = load_model()
 st.sidebar.header(T("patient_info"))
 
 patient_name = st.sidebar.text_input(T("patient_name"))
-
 gender = st.sidebar.selectbox(T("gender"), ["Male","Female"])
 age = st.sidebar.slider(T("age"),1,100,40)
 
@@ -163,10 +173,7 @@ work_type = st.sidebar.selectbox(
     ["Private","Self-employed","Govt_job","children","Never_worked"]
 )
 
-residence = st.sidebar.selectbox(
-    T("residence"),
-    ["Urban","Rural"]
-)
+residence = st.sidebar.selectbox(T("residence"),["Urban","Rural"])
 
 glucose = st.sidebar.slider(T("glucose"),50.0,300.0,100.0)
 bmi = st.sidebar.slider(T("bmi"),10.0,50.0,25.0)
@@ -211,9 +218,9 @@ if st.sidebar.button(T("predict")):
     diagnosis=T("stroke") if prob>=0.5 else T("no_stroke")
     color="red" if prob>=0.5 else "green"
 
-    advice=smart_advice(prob,bmi,glucose)
+    advice=smart_advice(prob,bmi,glucose,language)
     confidence=confidence_score(prob)
-    indicators=health_indicators(age,bmi,glucose)
+    indicators=health_indicators(age,bmi,glucose,language)
 
     col1,col2=st.columns(2)
 
@@ -227,6 +234,7 @@ if st.sidebar.button(T("predict")):
         st.pyplot(draw_gauge(risk_percent))
 
     st.subheader(T("health"))
+
     for name,status in indicators:
         st.write(f"**{name}:** {status}")
 
