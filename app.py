@@ -13,99 +13,42 @@ from ai_features import (
 )
 
 # =====================================================
-# 🌐 LANGUAGE SYSTEM
-# =====================================================
-
-translations = {
-
-"English":{
-"title":"🧠 AI Stroke Prediction System",
-"subtitle":"Intelligent Medical Decision Support",
-"patient_info":"👤 Patient Information",
-"patient_name":"Patient Name",
-"gender":"Gender",
-"age":"Age",
-"hypertension":"Hypertension",
-"heart":"Heart Disease",
-"married":"Ever Married",
-"work":"Work Type",
-"residence":"Residence Type",
-"glucose":"Average Glucose Level",
-"bmi":"BMI",
-"smoking":"Smoking Status",
-"predict":"🔍 Predict",
-"result":"Prediction Result",
-"risk":"Stroke Risk",
-"confidence":"AI Confidence",
-"health":"🩺 Health Indicators",
-"advice":"💡 Medical Advice",
-"history":"📋 Patient History",
-"saved":"✅ Patient saved successfully",
-"enter_name":"⚠️ Please enter patient name",
-"stroke":"⚠️ Stroke Detected",
-"no_stroke":"✅ No Stroke"
-},
-
-"العربية":{
-"title":"🧠 نظام التنبؤ بالجلطات الدماغية",
-"subtitle":"نظام دعم القرار الطبي الذكي",
-"patient_info":"👤 بيانات المريض",
-"patient_name":"اسم المريض",
-"gender":"الجنس",
-"age":"العمر",
-"hypertension":"ضغط الدم",
-"heart":"أمراض القلب",
-"married":"متزوج سابقاً",
-"work":"نوع العمل",
-"residence":"مكان السكن",
-"glucose":"مستوى السكر",
-"bmi":"مؤشر كتلة الجسم",
-"smoking":"حالة التدخين",
-"predict":"🔍 توقع",
-"result":"نتيجة التشخيص",
-"risk":"نسبة الخطر",
-"confidence":"ثقة النموذج",
-"health":"🩺 المؤشرات الصحية",
-"advice":"💡 نصائح طبية",
-"history":"📋 سجل المرضى",
-"saved":"✅ تم حفظ المريض بنجاح",
-"enter_name":"⚠️ الرجاء إدخال اسم المريض",
-"stroke":"⚠️ مصاب بجلطة محتملة",
-"no_stroke":"✅ غير مصاب"
-}
-}
-
-language = st.sidebar.selectbox("🌐 Language / اللغة",["English","العربية"])
-T=lambda k: translations[language][k]
-
-# =====================================================
 # PAGE CONFIG
 # =====================================================
 
-st.set_page_config(page_title="AI Stroke Doctor",layout="wide")
+st.set_page_config(
+    page_title="AI Stroke Doctor",
+    page_icon="🧠",
+    layout="wide"
+)
 
-# RTL Arabic
-if language=="العربية":
-    st.markdown("""
-    <style>
-    body {direction:rtl;}
-    .stMarkdown,label{text-align:right;}
-    </style>
-    """,unsafe_allow_html=True)
+# =====================================================
+# MEDICAL UI STYLE
+# =====================================================
 
-# UI STYLE
 st.markdown("""
 <style>
-.stApp{background:#f4f8fb;}
-section[data-testid="stSidebar"]{background:#eaf3fb;}
-.stButton>button{
-background:#0b5394;color:white;border-radius:10px;height:3em;width:100%;
+.stApp {background:#f4f8fb;}
+h1 {text-align:center;color:#0b5394;}
+section[data-testid="stSidebar"] {background:#eaf3fb;}
+
+.stButton>button {
+    background:#0b5394;
+    color:white;
+    border-radius:10px;
+    height:3em;
+    width:100%;
+    font-size:16px;
 }
 </style>
-""",unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-st.title(T("title"))
-st.markdown(f"### {T('subtitle')}")
+# =====================================================
+# TITLE
+# =====================================================
+
+st.title("🧠 AI Stroke Prediction System")
+st.markdown("### Intelligent Medical Decision Support")
 
 # =====================================================
 # LOAD MODEL
@@ -114,153 +57,173 @@ st.markdown(f"### {T('subtitle')}")
 @st.cache_resource
 def load_model():
     if not os.path.exists("stroke_model.pkl"):
-        st.error("Model missing")
+        st.error("❌ stroke_model.pkl not found")
         st.stop()
-    return pickle.load(open("stroke_model.pkl","rb"))
 
-model=load_model()
+    with open("stroke_model.pkl", "rb") as f:
+        model = pickle.load(f)
 
-# =====================================================
-# VALUE MAP SYSTEM (🔥 FIX)
-# =====================================================
+    return model
 
-def selectbox_map(label,options):
-    display=list(options.keys())
-    value_map=options
-    choice=st.sidebar.selectbox(label,display)
-    return value_map[choice]
-
-st.sidebar.header(T("patient_info"))
-
-patient_name=st.sidebar.text_input(T("patient_name"))
-
-gender=selectbox_map(T("gender"),
-{"Male":"Male","Female":"Female"} if language=="English"
-else {"ذكر":"Male","أنثى":"Female"})
-
-age=st.sidebar.slider(T("age"),1,100,40)
-
-hypertension=selectbox_map(T("hypertension"),
-{"No":"No","Yes":"Yes"} if language=="English"
-else {"لا":"No","نعم":"Yes"})
-
-heart_disease=selectbox_map(T("heart"),
-{"No":"No","Yes":"Yes"} if language=="English"
-else {"لا":"No","نعم":"Yes"})
-
-ever_married=selectbox_map(T("married"),
-{"No":"No","Yes":"Yes"} if language=="English"
-else {"لا":"No","نعم":"Yes"})
-
-work_type=selectbox_map(T("work"),
-{"Private":"Private","Self-employed":"Self-employed",
-"Govt_job":"Govt_job","children":"children","Never_worked":"Never_worked"}
-if language=="English"
-else {"قطاع خاص":"Private","عمل حر":"Self-employed",
-"حكومي":"Govt_job","طفل":"children","لم يعمل":"Never_worked"})
-
-residence=selectbox_map(T("residence"),
-{"Urban":"Urban","Rural":"Rural"} if language=="English"
-else {"مدينة":"Urban","ريف":"Rural"})
-
-glucose=st.sidebar.slider(T("glucose"),50.0,300.0,100.0)
-bmi=st.sidebar.slider(T("bmi"),10.0,50.0,25.0)
-
-smoking=selectbox_map(T("smoking"),
-{"never smoked":"never smoked",
-"formerly smoked":"formerly smoked",
-"smokes":"smokes"}
-if language=="English"
-else {"لا يدخن":"never smoked",
-"مدخن سابق":"formerly smoked",
-"مدخن":"smokes"})
+model = load_model()
 
 # =====================================================
-# ENCODING
+# SIDEBAR INPUTS
 # =====================================================
 
-gender=1 if gender=="Male" else 0
-hypertension=1 if hypertension=="Yes" else 0
-heart_disease=1 if heart_disease=="Yes" else 0
-ever_married=1 if ever_married=="Yes" else 0
-residence=1 if residence=="Urban" else 0
+st.sidebar.header("👤 Patient Information")
 
-work_map={"Private":0,"Self-employed":1,"Govt_job":2,"children":3,"Never_worked":4}
-smoke_map={"never smoked":0,"formerly smoked":1,"smokes":2}
+patient_name = st.sidebar.text_input("Patient Name")
 
-work_type=work_map[work_type]
-smoking=smoke_map[smoking]
+gender = st.sidebar.selectbox("Gender", ["Male", "Female"])
+age = st.sidebar.slider("Age", 1, 100, 40)
+
+hypertension = st.sidebar.selectbox("Hypertension", ["No", "Yes"])
+heart_disease = st.sidebar.selectbox("Heart Disease", ["No", "Yes"])
+ever_married = st.sidebar.selectbox("Ever Married", ["No", "Yes"])
+
+work_type = st.sidebar.selectbox(
+    "Work Type",
+    ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
+)
+
+residence = st.sidebar.selectbox(
+    "Residence Type",
+    ["Urban", "Rural"]
+)
+
+glucose = st.sidebar.slider("Average Glucose Level", 50.0, 300.0, 100.0)
+bmi = st.sidebar.slider("BMI", 10.0, 50.0, 25.0)
+
+smoking = st.sidebar.selectbox(
+    "Smoking Status",
+    ["never smoked", "formerly smoked", "smokes"]
+)
+
+# =====================================================
+# ENCODING (MODEL FORMAT)
+# =====================================================
+
+gender = 1 if gender == "Male" else 0
+hypertension = 1 if hypertension == "Yes" else 0
+heart_disease = 1 if heart_disease == "Yes" else 0
+ever_married = 1 if ever_married == "Yes" else 0
+residence = 1 if residence == "Urban" else 0
+
+work_map = {
+    "Private": 0,
+    "Self-employed": 1,
+    "Govt_job": 2,
+    "children": 3,
+    "Never_worked": 4
+}
+
+smoke_map = {
+    "never smoked": 0,
+    "formerly smoked": 1,
+    "smokes": 2
+}
+
+work_type = work_map[work_type]
+smoking = smoke_map[smoking]
 
 # =====================================================
 # PREDICTION
 # =====================================================
 
-if st.sidebar.button(T("predict")):
+if st.sidebar.button("🔍 Predict"):
 
-    if patient_name.strip()=="":
-        st.warning(T("enter_name"))
+    if patient_name.strip() == "":
+        st.warning("⚠️ Please enter patient name")
         st.stop()
 
-    data=np.array([[gender,age,hypertension,
-                    heart_disease,ever_married,
-                    work_type,residence,
-                    glucose,bmi,smoking]])
+    data = np.array([[
+        gender,
+        age,
+        hypertension,
+        heart_disease,
+        ever_married,
+        work_type,
+        residence,
+        glucose,
+        bmi,
+        smoking
+    ]])
 
-    prob=model.predict_proba(data)[0][1]
-    risk_percent=round(prob*100,2)
+    prob = model.predict_proba(data)[0][1]
+    risk_percent = round(prob * 100, 2)
 
-    diagnosis=T("stroke") if prob>=0.5 else T("no_stroke")
-    color="red" if prob>=0.5 else "green"
+    # Diagnosis
+    if prob >= 0.5:
+        diagnosis = "⚠️ Stroke Detected"
+        color = "red"
+    else:
+        diagnosis = "✅ No Stroke"
+        color = "green"
 
-    confidence=confidence_score(prob)
-    indicators=health_indicators(age,bmi,glucose,language)
-    advice=smart_advice(prob,bmi,glucose,language)
+    confidence = confidence_score(prob)
+    indicators = health_indicators(age, bmi, glucose)
+    advice = smart_advice(prob, bmi, glucose)
 
-    c1,c2=st.columns(2)
+    col1, col2 = st.columns(2)
 
-    with c1:
-        st.subheader(T("result"))
+    # RESULT PANEL
+    with col1:
+        st.subheader("Prediction Result")
         st.markdown(f"## :{color}[{diagnosis}]")
-        st.metric(T("risk"),f"{risk_percent}%")
-        st.metric(T("confidence"),f"{confidence}%")
+        st.metric("Stroke Risk", f"{risk_percent}%")
+        st.metric("AI Confidence", f"{confidence}%")
 
-    with c2:
-        st.pyplot(draw_gauge(risk_percent))
+    # GAUGE
+    with col2:
+        fig = draw_gauge(risk_percent)
+        st.pyplot(fig)
 
-    st.subheader(T("health"))
-    for n,s in indicators:
-        st.write(f"**{n}:** {s}")
+    # HEALTH
+    st.subheader("🩺 Health Indicators")
+    for name, status in indicators:
+        st.write(f"**{name}:** {status}")
 
-    st.subheader(T("advice"))
+    # ADVICE
+    st.subheader("💡 Medical Advice")
     st.info(advice)
 
-    record={
-        "name":patient_name,
-        "date":str(datetime.now()),
-        "risk":risk_percent,
-        "diagnosis":diagnosis
+    # SAVE HISTORY
+    record = {
+        "name": patient_name,
+        "date": str(datetime.now()),
+        "risk": risk_percent,
+        "diagnosis": diagnosis
     }
 
     try:
-        history=json.load(open("patients.json"))
+        with open("patients.json", "r") as f:
+            history = json.load(f)
     except:
-        history=[]
+        history = []
 
     history.append(record)
-    json.dump(history,open("patients.json","w"),indent=4)
 
-    st.success(T("saved"))
+    with open("patients.json", "w") as f:
+        json.dump(history, f, indent=4)
+
+    st.success("✅ Patient saved successfully")
 
 # =====================================================
 # HISTORY
 # =====================================================
 
 st.divider()
-st.subheader(T("history"))
+st.subheader("📋 Patient History")
 
 try:
-    history=json.load(open("patients.json"))
+    with open("patients.json", "r") as f:
+        history = json.load(f)
+
     for h in reversed(history[-5:]):
-        st.write(f"👤 {h['name']} | {h['date']} | {h['risk']}% | {h['diagnosis']}")
+        st.write(
+            f"👤 {h['name']} | {h['date']} | "
+            f"Risk: {h['risk']}% | {h['diagnosis']}"
+        )
 except:
-    st.write("—")
+    st.write("No history yet.")
