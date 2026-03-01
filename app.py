@@ -2,6 +2,7 @@ import streamlit as st
 import pickle
 import numpy as np
 import json
+import os
 from datetime import datetime
 
 from ai_features import (
@@ -12,9 +13,9 @@ from ai_features import (
     draw_gauge
 )
 
-# =============================
+# ====================================
 # PAGE CONFIG
-# =============================
+# ====================================
 st.set_page_config(
     page_title="AI Stroke Doctor",
     page_icon="🧠",
@@ -24,20 +25,31 @@ st.set_page_config(
 st.title("🧠 AI Stroke Prediction System")
 st.markdown("### Intelligent Medical Decision Support")
 
-# =============================
-# LOAD MODEL (SAFE LOAD)
-# =============================
-try:
-    with open("stroke_model.pkl", "rb") as f:
-        model = pickle.load(f)
-except Exception as e:
-    st.error("❌ Model failed to load. Re-upload stroke_model.pkl")
-    st.stop()
+# ====================================
+# LOAD MODEL (SAFE + FAST)
+# ====================================
+@st.cache_resource
+def load_model():
+    if not os.path.exists("stroke_model.pkl"):
+        st.error("❌ stroke_model.pkl not found in repository")
+        st.stop()
 
-# =============================
+    try:
+        with open("stroke_model.pkl", "rb") as f:
+            model = pickle.load(f)
+        return model
+    except Exception as e:
+        st.error("❌ Model failed to load")
+        st.code(str(e))
+        st.stop()
+
+model = load_model()
+st.success("✅ Model Loaded Successfully")
+
+# ====================================
 # SIDEBAR INPUTS
-# =============================
-st.sidebar.header("Patient Information")
+# ====================================
+st.sidebar.header("👤 Patient Information")
 
 patient_name = st.sidebar.text_input("Patient Name")
 
@@ -53,10 +65,7 @@ work_type = st.sidebar.selectbox(
     ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
 )
 
-residence = st.sidebar.selectbox(
-    "Residence Type",
-    ["Urban", "Rural"]
-)
+residence = st.sidebar.selectbox("Residence Type", ["Urban", "Rural"])
 
 glucose = st.sidebar.slider("Average Glucose Level", 50.0, 300.0, 100.0)
 bmi = st.sidebar.slider("BMI", 10.0, 50.0, 25.0)
@@ -66,9 +75,9 @@ smoking = st.sidebar.selectbox(
     ["never smoked", "formerly smoked", "smokes"]
 )
 
-# =============================
-# ENCODING (MATCH TRAINING)
-# =============================
+# ====================================
+# ENCODING (MATCH TRAINING DATA)
+# ====================================
 gender = 1 if gender == "Male" else 0
 hypertension = 1 if hypertension == "Yes" else 0
 heart_disease = 1 if heart_disease == "Yes" else 0
@@ -92,10 +101,14 @@ smoke_map = {
 work_type = work_map[work_type]
 smoking = smoke_map[smoking]
 
-# =============================
+# ====================================
 # PREDICTION
-# =============================
+# ====================================
 if st.sidebar.button("🔍 Predict"):
+
+    if patient_name.strip() == "":
+        st.warning("⚠️ Please enter patient name")
+        st.stop()
 
     try:
         data = np.array([[
@@ -111,12 +124,21 @@ if st.sidebar.button("🔍 Predict"):
             smoking
         ]])
 
+        # ✅ Prevent feature mismatch crash
+        if hasattr(model, "n_features_in_"):
+            if data.shape[1] != model.n_features_in_:
+                st.error(
+                    f"❌ Model expects {model.n_features_in_} features "
+                    f"but received {data.shape[1]}"
+                )
+                st.stop()
+
         prob = model.predict_proba(data)[0][1]
         risk_percent = round(prob * 100, 2)
 
-        # =============================
+        # ====================================
         # FINAL DIAGNOSIS
-        # =============================
+        # ====================================
         if prob >= 0.5:
             diagnosis = "⚠️ Stroke Detected (مصاب)"
             result_color = "red"
@@ -124,7 +146,7 @@ if st.sidebar.button("🔍 Predict"):
             diagnosis = "✅ No Stroke (غير مصاب)"
             result_color = "green"
 
-        level, color = risk_level(prob)
+        level, _ = risk_level(prob)
         advice = smart_advice(prob, bmi, glucose)
         confidence = confidence_score(prob)
         indicators = health_indicators(age, bmi, glucose)
@@ -144,19 +166,19 @@ if st.sidebar.button("🔍 Predict"):
             st.pyplot(fig)
 
         # HEALTH INDICATORS
-        st.subheader("Health Indicators")
+        st.subheader("🩺 Health Indicators")
         for name, status in indicators:
             st.write(f"**{name}:** {status}")
 
         # ADVICE
-        st.subheader("Medical Advice")
+        st.subheader("💡 Medical Advice")
         st.info(advice)
 
-        # =============================
-        # SAVE PATIENT HISTORY
-        # =============================
+        # ====================================
+        # SAVE HISTORY
+        # ====================================
         record = {
-            "name": patient_name if patient_name else "Unknown",
+            "name": patient_name,
             "date": str(datetime.now()),
             "risk": risk_percent,
             "diagnosis": diagnosis
@@ -173,13 +195,27 @@ if st.sidebar.button("🔍 Predict"):
         with open("patients.json", "w") as f:
             json.dump(history, f, indent=4)
 
-        st.success("Patient saved successfully ✅")
+        st.success("✅ Patient saved successfully")
 
     except Exception as e:
-        st.error("❌ Prediction Error — Check model features match training data.")
+        st.error("❌ Prediction Error")
+        st.code(str(e))
 
-# =============================
+# ====================================
 # HISTORY
-# =============================
+# ====================================
 st.divider()
 st.subheader("📋 Patient History")
+
+try:
+    with open("patients.json", "r") as f:
+        history = json.load(f)
+
+    for h in reversed(history[-5:]):
+        st.write(
+            f"👤 **{h['name']}** | {h['date']} | "
+            f"Risk: {h['risk']}% | {h['diagnosis']}"
+        )
+
+except:
+    st.write("No history yet.")
